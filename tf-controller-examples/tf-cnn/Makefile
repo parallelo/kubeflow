@@ -35,7 +35,11 @@ DOCKERHUB_PUBLISHED_GPU := hub.docker.com/r/kubeflow/tf-benchmarks-gpu:v20171202
 GCR_PUBLISHED_CPU := gcr.io/kubeflow/tf-benchmarks-cpu:v20171202-bdab599-dirty-284af3
 DOCKERHUB_PUBLISHED_GPU := hub.docker.com/r/kubeflowtf-benchmarks-gpu:v20171202-bdab599-dirty-284af3
 
-DOCKERHUB_ROCM := hub.docker.com/r/rocm/tensorflow-private:kubeflow-tf-benchmarks-v0.1
+DOCKERHUB_ROCM := rocm/tensorflow-private:kubeflow-tf-benchmarks-v0.1
+
+PUBLISHED_CPU := $(GCR_PUBLISHED_CPU)
+PUBLISHED_GPU := $(GCR_PUBLISHED_GPU)
+PUBLISHED_ROCM := $(DOCKERHUB_ROCM)
 
 define build_cpu
 	jinja2 Dockerfile.template --format=yaml -D base_image=$(CPU_BASE) > Dockerfile.cpu
@@ -76,18 +80,18 @@ build-images: build_gcr build_dockerhub push_dockerhub push_gcr
 
 
 build-templates:
-	python create_job_specs.py \
-                --cpu_image=$(PUBLISHED_CPU) --gpu_image=$(PUBLISHED_GPU) --rocm_image=$(PUBLISHED_ROCM) \
-		--gpu --num_workers=1 --output=tf_job_gpu.yaml
-	python create_job_specs.py \
-                --cpu_image=$(PUBLISHED_CPU) --gpu_image=$(PUBLISHED_GPU) --rocm_image=$(PUBLISHED_ROCM) \
-		--gpu --num_workers=3 --output=tf_job_gpu_distributed.yaml
-	python create_job_specs.py \
-                --cpu_image=$(PUBLISHED_CPU) --gpu_image=$(PUBLISHED_GPU) --rocm_image=$(PUBLISHED_ROCM) \
-		--no-gpu --num_workers=1 --output=tf_job_cpu.yaml
-	python create_job_specs.py \
-                --cpu_image=$(PUBLISHED_CPU) --gpu_image=$(PUBLISHED_GPU) --rocm_image=$(PUBLISHED_ROCM) \
-		--no-gpu --num_workers=3 --output=tf_job_cpu_distributed.yaml
+#	python create_job_specs.py \
+#                --cpu_image=$(PUBLISHED_CPU) --gpu_image=$(PUBLISHED_GPU) --rocm_image=$(PUBLISHED_ROCM) \
+#		--gpu --num_workers=1 --output=tf_job_gpu.yaml
+#	python create_job_specs.py \
+#                --cpu_image=$(PUBLISHED_CPU) --gpu_image=$(PUBLISHED_GPU) --rocm_image=$(PUBLISHED_ROCM) \
+#		--gpu --num_workers=3 --output=tf_job_gpu_distributed.yaml
+#	python create_job_specs.py \
+#                --cpu_image=$(PUBLISHED_CPU) --gpu_image=$(PUBLISHED_GPU) --rocm_image=$(PUBLISHED_ROCM) \
+#		--no-gpu --num_workers=1 --output=tf_job_cpu.yaml
+#	python create_job_specs.py \
+#                --cpu_image=$(PUBLISHED_CPU) --gpu_image=$(PUBLISHED_GPU) --rocm_image=$(PUBLISHED_ROCM) \
+#		--no-gpu --num_workers=3 --output=tf_job_cpu_distributed.yaml
 	python create_job_specs.py \
                 --cpu_image=$(PUBLISHED_CPU) --gpu_image=$(PUBLISHED_GPU) --rocm_image=$(PUBLISHED_ROCM) \
                 --rocm --no-gpu --num_workers=1 --output=tf_job_rocm.yaml

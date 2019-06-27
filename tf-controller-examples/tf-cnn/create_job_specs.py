@@ -78,7 +78,6 @@ if __name__ == "__main__":
       "--no-gpu", dest="use_gpu", action="store_false", help="Do not use gpus.")
 
   parser.set_defaults(use_gpu=True)
-  parser.set_defaults(use_rocm=False)
 
   args = parser.parse_args()
 
@@ -86,7 +85,7 @@ if __name__ == "__main__":
   job_name = "inception-" + datetime.datetime.now().strftime("%y%m%d-%H%M%S")
   if args.use_gpu:
     job_name += "-gpu"
-  else if args.use_rocm:
+  elif args.use_rocm:
     job_name += "-rocm"
   else:
     job_name += "-cpu"
@@ -132,6 +131,12 @@ if __name__ == "__main__":
     command.append("--device=cpu")
     command.append("--data_format=NHWC")
 
+  worker_image = args.cpu_image
+  if args.use_gpu:
+    worker_image = args.gpu_image
+  if args.use_rocm:
+    worker_image = args.rocm_image
+
   # Add the master spec. The master only acts as the chief and doesn't do
   # any training so it can always use the CPU image.
   master_spec = {
@@ -140,7 +145,7 @@ if __name__ == "__main__":
       "template": {
           "spec": {
               "containers": [{
-                  "image": args.cpu_image,
+                  "image": worker_image,
                   "name": "tensorflow",
                   "workingDir": working_dir,
                   "args": command,
@@ -152,12 +157,6 @@ if __name__ == "__main__":
   }
 
   body["spec"]["replicaSpecs"].append(master_spec)
-
-  worker_image = args.cpu_image
-  if args.use_gpu:
-    worker_image = args.gpu_image
-  if args.use_rocm:
-    worker_image = args.rocm_image
 
   worker_spec = {
       "replicas": num_workers,
@@ -198,7 +197,7 @@ if __name__ == "__main__":
       "template": {
           "spec": {
               "containers": [{
-                  "image": args.cpu_image,
+                  "image": worker_image,
                   "name": "tensorflow",
                   "workingDir": working_dir,
                   "args": command,
