@@ -210,7 +210,7 @@ if __name__ == "__main__":
 
   body["spec"]["replicaSpecs"].append(ps_spec)
 
-  body["spec"]["tfImage"] = args.cpu_image
+  body["spec"]["tfImage"] = worker_image
 
   # Tensorboard is crashing with TF 1.5
   # body["spec"]["tensorBoard"] = {
