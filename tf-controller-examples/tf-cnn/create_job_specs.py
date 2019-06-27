@@ -53,6 +53,12 @@ if __name__ == "__main__":
       help="The docker image for GPU jobs.")
 
   parser.add_argument(
+      "--rocm_image",
+      type=str,
+      required=True,
+      help="The docker image for ROCm jobs.")
+
+  parser.add_argument(
       "--num_workers",
       type=int,
       default=1,
@@ -64,11 +70,15 @@ if __name__ == "__main__":
       help="(Optional) the file to write the template to.")
 
   parser.add_argument(
+      "--rocm", dest="use_rocm", action="store_true", help="Use ROCm.")
+
+  parser.add_argument(
       "--gpu", dest="use_gpu", action="store_true", help="Use gpus.")
   parser.add_argument(
       "--no-gpu", dest="use_gpu", action="store_false", help="Do not use gpus.")
 
   parser.set_defaults(use_gpu=True)
+  parser.set_defaults(use_rocm=False)
 
   args = parser.parse_args()
 
@@ -76,6 +86,8 @@ if __name__ == "__main__":
   job_name = "inception-" + datetime.datetime.now().strftime("%y%m%d-%H%M%S")
   if args.use_gpu:
     job_name += "-gpu"
+  else if args.use_rocm:
+    job_name += "-rocm"
   else:
     job_name += "-cpu"
 
@@ -109,7 +121,7 @@ if __name__ == "__main__":
       "--flush_stdout=true",
   ]
 
-  if args.use_gpu:
+  if args.use_gpu or args.use_rocm:
     command.append("--num_gpus=1")
   else:
     # We need to set num_gpus=1 even if not using GPUs because otherwise
@@ -144,6 +156,8 @@ if __name__ == "__main__":
   worker_image = args.cpu_image
   if args.use_gpu:
     worker_image = args.gpu_image
+  if args.use_rocm:
+    worker_image = args.rocm_image
 
   worker_spec = {
       "replicas": num_workers,
@@ -166,6 +180,13 @@ if __name__ == "__main__":
     worker_spec["template"]["spec"]["containers"][0]["resources"] = {
         "limits": {
             "nvidia.com/gpu": 1,
+        }
+    }
+
+  if args.use_rocm:
+    worker_spec["template"]["spec"]["containers"][0]["resources"] = {
+        "limits": {
+            "amd.com/gpu": 1,
         }
     }
 

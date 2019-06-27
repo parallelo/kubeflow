@@ -24,6 +24,7 @@ DIR := ${CURDIR}
 CPU_BASE = tensorflow/tensorflow@sha256:5edc0446cc989ad75bc30631f89f20694fe5bf5226f665d47e5c7f35a3b18484
 # GPU_BASE = tensorflow/tensorflow:nightly-gpu
 GPU_BASE = tensorflow/tensorflow@sha256:bfadad8f2c80424d8d6059d3b8cd6947bf23111dc786fc33db72b56b632a1f28
+ROCM_BASE= rocm/tensorflow:latest
 
 GCR_BENCHMARKS_IMAGE := $(GCR_PROJECT)/tf-benchmarks
 DOCKERHUB_BENCHMARKS_IMAGE := $(DOCKERHUB_PROJECT)/tf-benchmarks
@@ -33,6 +34,8 @@ GCR_PUBLISHED_CPU := gcr.io/kubeflow/tf-benchmarks-cpu:v20171202-bdab599-dirty-2
 DOCKERHUB_PUBLISHED_GPU := hub.docker.com/r/kubeflow/tf-benchmarks-gpu:v20171202-bdab599-dirty-284af3
 GCR_PUBLISHED_CPU := gcr.io/kubeflow/tf-benchmarks-cpu:v20171202-bdab599-dirty-284af3
 DOCKERHUB_PUBLISHED_GPU := hub.docker.com/r/kubeflowtf-benchmarks-gpu:v20171202-bdab599-dirty-284af3
+
+DOCKERHUB_ROCM := hub.docker.com/r/rocm/tensorflow-private:kubeflow-tf-benchmarks-v0.1
 
 define build_cpu
 	jinja2 Dockerfile.template --format=yaml -D base_image=$(CPU_BASE) > Dockerfile.cpu
@@ -44,31 +47,51 @@ define build_gpu
 	docker build -t $(1)-gpu:$(TAG) -f Dockerfile.gpu ./
 endef
 
+define build_rocm
+        jinja2 Dockerfile.template --format=yaml -D base_image=$(ROCM_BASE) > Dockerfile.rocm
+        docker build -t $(1) -f Dockerfile.rocm ./
+endef
+
 build_gcr:
-	$(call build_cpu,$(GCR_BENCHMARKS_IMAGE))
-	$(call build_gpu,$(GCR_BENCHMARKS_IMAGE))
+#	$(call build_cpu,$(GCR_BENCHMARKS_IMAGE))
+#	$(call build_gpu,$(GCR_BENCHMARKS_IMAGE))
+	$(call build_rocm,$(GCR_BENCHMARKS_IMAGE))
 
 build_dockerhub:
-	$(call build_cpu,$(DOCKERHUB_BENCHMARKS_IMAGE))
-	$(call build_gpu,$(DOCKERHUB_BENCHMARKS_IMAGE))
+#	$(call build_cpu,$(DOCKERHUB_BENCHMARKS_IMAGE))
+#	$(call build_gpu,$(DOCKERHUB_BENCHMARKS_IMAGE))
+	$(call build_rocm,$(DOCKERHUB_ROCM))
 
 push_gcr: build_gcr
-	gcloud docker -- push $(GCR_BENCHMARKS_IMAGE)-cpu:$(TAG)
-	gcloud docker -- push $(GCR_BENCHMARKS_IMAGE)-gpu:$(TAG)
+#	gcloud docker -- push $(GCR_BENCHMARKS_IMAGE)-cpu:$(TAG)
+#	gcloud docker -- push $(GCR_BENCHMARKS_IMAGE)-gpu:$(TAG)
+	gcloud docker -- push $(GCR_BENCHMARKS_IMAGE)-rocm:$(TAG)
 
 push_dockerhub: build_dockerhub
-	docker push $(DOCKERHUB_BENCHMARKS_IMAGE)-cpu:$(TAG)
-	docker push $(DOCKERHUB_BENCHMARKS_IMAGE)-gpu:$(TAG)
+#	docker push $(DOCKERHUB_BENCHMARKS_IMAGE)-cpu:$(TAG)
+#	docker push $(DOCKERHUB_BENCHMARKS_IMAGE)-gpu:$(TAG)
+	docker push $(DOCKERHUB_ROCM)
 
 build-images: build_gcr build_dockerhub push_dockerhub push_gcr
 
 
 build-templates:
-	python create_job_specs.py --cpu_image=$(PUBLISHED_CPU) --gpu_image=$(PUBLISHED_GPU) \
+	python create_job_specs.py \
+                --cpu_image=$(PUBLISHED_CPU) --gpu_image=$(PUBLISHED_GPU) --rocm_image=$(PUBLISHED_ROCM) \
 		--gpu --num_workers=1 --output=tf_job_gpu.yaml
-	python create_job_specs.py --cpu_image=$(PUBLISHED_CPU) --gpu_image=$(PUBLISHED_GPU) \
+	python create_job_specs.py \
+                --cpu_image=$(PUBLISHED_CPU) --gpu_image=$(PUBLISHED_GPU) --rocm_image=$(PUBLISHED_ROCM) \
 		--gpu --num_workers=3 --output=tf_job_gpu_distributed.yaml
-	python create_job_specs.py --cpu_image=$(PUBLISHED_CPU) --gpu_image=$(PUBLISHED_GPU) \
+	python create_job_specs.py \
+                --cpu_image=$(PUBLISHED_CPU) --gpu_image=$(PUBLISHED_GPU) --rocm_image=$(PUBLISHED_ROCM) \
 		--no-gpu --num_workers=1 --output=tf_job_cpu.yaml
-	python create_job_specs.py --cpu_image=$(PUBLISHED_CPU) --gpu_image=$(PUBLISHED_GPU) \
+	python create_job_specs.py \
+                --cpu_image=$(PUBLISHED_CPU) --gpu_image=$(PUBLISHED_GPU) --rocm_image=$(PUBLISHED_ROCM) \
 		--no-gpu --num_workers=3 --output=tf_job_cpu_distributed.yaml
+	python create_job_specs.py \
+                --cpu_image=$(PUBLISHED_CPU) --gpu_image=$(PUBLISHED_GPU) --rocm_image=$(PUBLISHED_ROCM) \
+                --rocm --no-gpu --num_workers=1 --output=tf_job_rocm.yaml
+	python create_job_specs.py \
+                --cpu_image=$(PUBLISHED_CPU) --gpu_image=$(PUBLISHED_GPU) --rocm_image=$(PUBLISHED_ROCM) \
+                --rocm --no-gpu --num_workers=3 --output=tf_job_rocm_distributed.yaml
+
